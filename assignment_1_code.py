@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -26,13 +24,18 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         layers = []
         for in_dim, out_dim in zip(dim_list[:-1], dim_list[1:]):
             if activation_fun == 'none':
-                layers += [torch.nn.Linear(in_dim, out_dim, bias=True)]
+                layers += [torch.nn.Linear(in_dim, out_dim)]
             else:
                 layers += [
                     torch.nn.Linear(in_dim, out_dim, bias=True),
                     GenericFeedforwardNetwork.non_linear_activation_fun[activation_fun]()
                 ]
-        self.fc_layers = torch.nn.Sequential(*layers[:-1])
+
+        if activation_fun == 'none':
+            self.fc_layers = torch.nn.Sequential(*layers[:])
+        else:
+            self.fc_layers = torch.nn.Sequential(*layers[:-1])
+
         self.log_softmax = torch.nn.LogSoftmax(dim=1)
 
     def forward(self, x):
@@ -72,17 +75,17 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         return acc
 
 
-def load_dataset() -> Tuple[DataLoader, DataLoader, DataLoader]:
+def load_dataset() -> None:
     """
     The function loads dataset from FashionMNIST
     and prepare the DataLoader objects for training, validation and testing sets
-    :return: train_loader, valid_loader, test_loader
+    :return: train_loader, valid_loader, test_loader (update global variables)
     """
 
-    # create MNIST transform
+    # create normalize MNIST transform
     normalize = transforms.Normalize((0.1307,), (0.3081,))
-    totensor = transforms.ToTensor()
-    mnist_transforms = transforms.Compose([totensor, normalize])
+    transform_to_tensor = transforms.ToTensor()
+    mnist_transforms = transforms.Compose([transform_to_tensor, normalize])
 
     # load the data: train and test sets
     train_set = torchvision.datasets.FashionMNIST("./data", download=True,
@@ -105,14 +108,13 @@ def load_dataset() -> Tuple[DataLoader, DataLoader, DataLoader]:
     # create DataLoader object for each set
     global train_loader, valid_loader, test_loader
     train_loader = DataLoader(train_set, sampler=train_sample, batch_size=64)
-    valid_loader = DataLoader(train_set, sampler=train_sample, batch_size=64)
+    valid_loader = DataLoader(train_set, sampler=valid_sample, batch_size=64)
     test_loader = DataLoader(test_set, shuffle=True, batch_size=64, )
-
-    return train_loader, valid_loader, test_loader
 
 
 def one_hidden_layer_no_activation(number_of_neurons):
-    global FashionMNIST_features, FashionMNIST_classes, train_loader
+    global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
+
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons], FashionMNIST_classes, 'none')
 
     loss_function = torch.nn.CrossEntropyLoss()
@@ -138,11 +140,12 @@ def one_hidden_layer_no_activation(number_of_neurons):
             loss.backward()
             optimizer.step()
             losses.append(loss.detach())
+        print("epoch {} | train loss : {} ".format(i, np.mean(losses)))
 
     train_acc = model.calculate_acc(train_loader)
-    validation_acc = model.calculate_acc(valid_loader)
+    test_acc = model.calculate_acc(test_loader)
     print("train accuracy : %.4f" % train_acc)
-    print("test accuracy : %.4f" % validation_acc)
+    print("test accuracy : %.4f" % test_acc)
 
 
 def two_hidden_layers_sigmoid(number_of_neurons):
