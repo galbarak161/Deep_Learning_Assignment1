@@ -1,3 +1,5 @@
+import copy
+
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -6,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # global variables
-train_loader = None
+train_loader = []
 valid_loader = None
 test_loader = None
 FashionMNIST_features = 28 * 28
@@ -50,7 +52,40 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         """
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
-    def calculate_acc(self, dataset_loader: DataLoader) -> float:
+    def train_model(self, optimizer, epochs, loss_function):
+        train_acc_per_epoch = []
+        val_acc_per_epoch = []
+        for i in range(epochs):
+            losses = []
+            for j, (data, label) in enumerate(train_loader):
+                optimizer.zero_grad()
+                # flatten the image to vector of size 28*28
+                data = data.view(-1, FashionMNIST_features)
+                # calculate output
+                y_prediction = self(data)
+                # calculate loss
+                loss = loss_function(y_prediction, label)
+                # backpropagation
+                loss.backward()
+                optimizer.step()
+                losses.append(loss.detach())
+            print("epoch {} | train loss : {} ".format(i, np.mean(losses)))
+
+            # calculate accuracies and store them
+            train_acc = self.calculate_acc(train_loader)
+            val_acc = self.calculate_acc(valid_loader)
+            train_acc_per_epoch.append(train_acc)
+            val_acc_per_epoch.append(val_acc)
+
+        # plot the results
+        plt.title('Train and validation sets accuracy per epoch')
+        plt.plot(train_acc_per_epoch, label='Train Accuracy')
+        plt.plot(val_acc_per_epoch, label='Validation Accuracy')
+        plt.xticks(range(epochs))
+        plt.legend()
+        plt.show()
+
+    def calculate_acc(self, dataset_loader):
         """
         Function to calculate the accuracy of a given dataset after model training
         :param dataset_loader: dataset to check
@@ -83,6 +118,7 @@ def load_dataset() -> None:
     """
 
     # create normalize MNIST transform
+    # todo change to the right numbers
     normalize = transforms.Normalize((0.1307,), (0.3081,))
     transform_to_tensor = transforms.ToTensor()
     mnist_transforms = transforms.Compose([transform_to_tensor, normalize])
@@ -152,8 +188,35 @@ def two_hidden_layers_sigmoid(number_of_neurons):
     pass
 
 
+# function 4
 def two_hidden_layers_relu(number_of_neurons):
-    pass
+    print('Running two_hidden_layers_relu')
+    global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader, valid_loader
+
+    loss_function = torch.nn.CrossEntropyLoss()
+    learning_rate = 0.01
+    epochs = 2
+
+    # find the best lr with validation set
+    best_accuracy = 0
+    best_model = None
+    while learning_rate < 1:
+        model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'relu')
+        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+        model.train_model(optimizer, epochs, loss_function)
+
+        val_acc = model.calculate_acc(valid_loader)
+        print(f'Learning Rate: {learning_rate}: Validation Set Accuracy: {val_acc}')
+        if val_acc > best_accuracy:
+            best_accuracy = val_acc
+            best_model = copy.deepcopy(model)
+
+        learning_rate += 0.3
+
+    train_acc = best_model.calculate_acc(train_loader)
+    test_acc = best_model.calculate_acc(test_loader)
+    print("train accuracy : %.4f" % train_acc)
+    print("test accuracy : %.4f" % test_acc)
 
 
 def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons):
@@ -176,7 +239,7 @@ def four_hidden_layers_adam_early_stopping(number_of_neurons):
     pass
 
 
-if __name__ == '__main__':
+def main():
     load_dataset()
 
     # 4 neurons per layer
@@ -197,3 +260,7 @@ if __name__ == '__main__':
     four_hidden_layers_adam(number_of_neurons)
     four_hidden_layers_adam_weight_decay(number_of_neurons)
     four_hidden_layers_adam_early_stopping(number_of_neurons)
+
+
+if __name__ == '__main__':
+    main()
