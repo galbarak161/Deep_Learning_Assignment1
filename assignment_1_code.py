@@ -128,8 +128,8 @@ class GenericFeedforwardNetwork(torch.nn.Module):
 
             train_losses = np.mean(train_losses)
             valid_losses = np.mean(valid_losses)
-            print("epoch {} | train loss : {} | validation loss : {} | train accuracy : {} | validation accuracy : {} ".
-                  format(i + 1, train_losses, valid_losses, train_acc, val_acc))
+            print("epoch {} | train loss : {:.4} | validation loss : {:.4} | train accuracy : {:.4} | validation "
+                  "accuracy : {:.4} ".format(i + 1, train_losses, valid_losses, train_acc, val_acc))
 
             train_acc_per_epoch.append(train_acc)
             val_acc_per_epoch.append(val_acc)
@@ -238,7 +238,7 @@ def one_hidden_layer_no_activation(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
 
-    print('\nRunning one_hidden_layer_no_activation')
+    print('\nFunction 2: one_hidden_layer_no_activation')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons], FashionMNIST_classes, 'none')
 
     loss_function = torch.nn.CrossEntropyLoss()
@@ -262,7 +262,7 @@ def two_hidden_layers_sigmoid(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
 
-    print('\nRunning two_hidden_layers_sigmoid')
+    print('\nFunction 3: two_hidden_layers_sigmoid')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'sigmoid')
 
     loss_function = torch.nn.CrossEntropyLoss()
@@ -287,7 +287,7 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader, valid_loader
 
-    print('\nRunning two_hidden_layers_relu')
+    print('\nFunction 4: two_hidden_layers_relu')
 
     loss_function = torch.nn.CrossEntropyLoss()
     learning_rate = 0.01
@@ -306,7 +306,9 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
         model.train_model(optimizer, epochs, loss_function)
 
         val_acc = model.calculate_accuracy(valid_loader)
-        print(f'Learning Rate: {learning_rate}: Validation Set Accuracy: {val_acc}')
+
+        print("Learning Rate: {:.4}: Validation Set Accuracy: {:.4}".format(learning_rate, val_acc))
+
         if val_acc > best_accuracy:
             best_accuracy = val_acc
             best_model = copy.deepcopy(model)
@@ -328,7 +330,7 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader, valid_loader
 
-    print('\nRunning two_hidden_layers_relu_SGD_decreasing_lr')
+    print('\nFunction 5: two_hidden_layers_relu_SGD_decreasing_lr')
 
     loss_function = torch.nn.CrossEntropyLoss()
     learning_rate = 0.01
@@ -347,12 +349,14 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
         model.train_model(optimizer, epochs, loss_function)
 
         val_acc = model.calculate_accuracy(valid_loader)
-        print(f'Learning Rate: {learning_rate}: Validation Set Accuracy: {val_acc}')
+
+        print("Learning Rate: {:.4}: Validation Set Accuracy: {:.4}".format(learning_rate, val_acc))
+
         if val_acc > best_accuracy:
             best_accuracy = val_acc
             best_model = copy.deepcopy(model)
 
-        learning_rate -= 0.001
+        learning_rate -= 0.002
 
     train_acc = best_model.calculate_accuracy(train_loader)
     test_acc = best_model.calculate_accuracy(test_loader)
@@ -369,7 +373,7 @@ def two_hidden_layers_relu_adam(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
 
-    print('\nRunning two_hidden_layers_relu_adam')
+    print('\nFunction 6: two_hidden_layers_relu_adam')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'relu')
 
     loss_function = torch.nn.CrossEntropyLoss()
@@ -394,7 +398,7 @@ def four_hidden_layers_adam(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
 
-    print('\nRunning four_hidden_layers_adam')
+    print('\nFunction 7: four_hidden_layers_adam')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 4, FashionMNIST_classes, 'relu')
 
     loss_function = torch.nn.CrossEntropyLoss()
