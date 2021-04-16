@@ -1,5 +1,4 @@
 import copy
-
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -11,6 +10,7 @@ import matplotlib.pyplot as plt
 train_loader = []
 valid_loader = []
 test_loader = []
+train_set = []
 FashionMNIST_features = 28 * 28
 FashionMNIST_classes = 10
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -79,13 +79,13 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         global train_loader, valid_loader
 
         # for debug
-        epochs = 5
+        epochs = 2
 
         if use_entire_training_set:
-            train_set = train_loader
+            training_set = train_loader
             valid_set = valid_loader
         else:
-            train_set, valid_set = split_training_data_to_validation_set(0.1)
+            training_set, valid_set = split_training_data_to_validation_set(0.1)
 
         train_acc_per_epoch = []
         val_acc_per_epoch = []
@@ -95,7 +95,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         for i in range(epochs):
             train_losses = []
             valid_losses = []
-            for data, label in train_set:
+            for data, label in training_set:
                 optimizer.zero_grad()
 
                 # flatten the image batch to vector of size 28*28
@@ -123,13 +123,13 @@ class GenericFeedforwardNetwork(torch.nn.Module):
                 valid_losses.append(loss.detach())
 
             # calculate accuracies and losses
-            train_acc = self.calculate_accuracy(train_set)
+            train_acc = self.calculate_accuracy(training_set)
             val_acc = self.calculate_accuracy(valid_set)
 
             train_losses = np.mean(train_losses)
             valid_losses = np.mean(valid_losses)
-            print("epoch {} | train loss : {} | validation loss : {} | train accuracy : {} | validation accuracy : {} ".
-                  format(i + 1, train_losses, valid_losses, train_acc, val_acc))
+            print("epoch {} | train loss : {:.4} | validation loss : {:.4} | train accuracy : {:.4} | validation "
+                  "accuracy : {:.4} ".format(i + 1, train_losses, valid_losses, train_acc, val_acc))
 
             train_acc_per_epoch.append(train_acc)
             val_acc_per_epoch.append(val_acc)
@@ -191,6 +191,7 @@ def load_dataset() -> None:
     mnist_transforms = transforms.Compose([transform_to_tensor, normalize])
 
     # load the data: train and test sets
+    global train_set
     train_set = torchvision.datasets.FashionMNIST("./data", download=True, transform=mnist_transforms)
     test_set = torchvision.datasets.FashionMNIST("./data", download=True, train=False, transform=mnist_transforms)
     print('train set len', len(train_set))
@@ -202,13 +203,14 @@ def load_dataset() -> None:
     test_loader = DataLoader(test_set, shuffle=True, batch_size=64)
 
 
-def split_training_data_to_validation_set(percent_of_training_set: float) -> tuple[DataLoader, DataLoader]:
+def split_training_data_to_validation_set(percent_of_training_set: float) -> DataLoader:
     """
     Function for implement single forward step on network
     :param percent_of_training_set: percent of training set size (0-1)
     :return: two DataLoader objects - training and validation
     """
 
+    global train_set
     # preparation
     indices = list(range(len(train_set)))
     np.random.shuffle(indices)
@@ -236,7 +238,7 @@ def one_hidden_layer_no_activation(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
 
-    print('\nRunning one_hidden_layer_no_activation')
+    print('\nFunction 2: one_hidden_layer_no_activation')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons], FashionMNIST_classes, 'none')
 
     loss_function = torch.nn.CrossEntropyLoss()
@@ -260,7 +262,7 @@ def two_hidden_layers_sigmoid(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
 
-    print('\nRunning two_hidden_layers_sigmoid')
+    print('\nFunction 3: two_hidden_layers_sigmoid')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'sigmoid')
 
     loss_function = torch.nn.CrossEntropyLoss()
@@ -285,7 +287,7 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader, valid_loader
 
-    print('\nRunning two_hidden_layers_relu')
+    print('\nFunction 4: two_hidden_layers_relu')
 
     loss_function = torch.nn.CrossEntropyLoss()
     learning_rate = 0.01
@@ -304,7 +306,9 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
         model.train_model(optimizer, epochs, loss_function)
 
         val_acc = model.calculate_accuracy(valid_loader)
-        print(f'Learning Rate: {learning_rate}: Validation Set Accuracy: {val_acc}')
+
+        print("Learning Rate: {:.4}: Validation Set Accuracy: {:.4}".format(learning_rate, val_acc))
+
         if val_acc > best_accuracy:
             best_accuracy = val_acc
             best_model = copy.deepcopy(model)
@@ -326,7 +330,7 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader, valid_loader
 
-    print('\nRunning two_hidden_layers_relu_SGD_decreasing_lr')
+    print('\nFunction 5: two_hidden_layers_relu_SGD_decreasing_lr')
 
     loss_function = torch.nn.CrossEntropyLoss()
     learning_rate = 0.01
@@ -345,12 +349,14 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
         model.train_model(optimizer, epochs, loss_function)
 
         val_acc = model.calculate_accuracy(valid_loader)
-        print(f'Learning Rate: {learning_rate}: Validation Set Accuracy: {val_acc}')
+
+        print("Learning Rate: {:.4}: Validation Set Accuracy: {:.4}".format(learning_rate, val_acc))
+
         if val_acc > best_accuracy:
             best_accuracy = val_acc
             best_model = copy.deepcopy(model)
 
-        learning_rate -= 0.001
+        learning_rate -= 0.002
 
     train_acc = best_model.calculate_accuracy(train_loader)
     test_acc = best_model.calculate_accuracy(test_loader)
@@ -367,7 +373,7 @@ def two_hidden_layers_relu_adam(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
 
-    print('\nRunning two_hidden_layers_relu_adam')
+    print('\nFunction 6: two_hidden_layers_relu_adam')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'relu')
 
     loss_function = torch.nn.CrossEntropyLoss()
@@ -392,7 +398,7 @@ def four_hidden_layers_adam(number_of_neurons: int) -> None:
 
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
 
-    print('\nRunning four_hidden_layers_adam')
+    print('\nFunction 7: four_hidden_layers_adam')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 4, FashionMNIST_classes, 'relu')
 
     loss_function = torch.nn.CrossEntropyLoss()
