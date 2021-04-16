@@ -1,5 +1,4 @@
 import copy
-
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -11,6 +10,7 @@ import matplotlib.pyplot as plt
 train_loader = []
 valid_loader = []
 test_loader = []
+train_set = []
 FashionMNIST_features = 28 * 28
 FashionMNIST_classes = 10
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -79,13 +79,13 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         global train_loader, valid_loader
 
         # for debug
-        epochs = 5
+        epochs = 2
 
         if use_entire_training_set:
-            train_set = train_loader
+            training_set = train_loader
             valid_set = valid_loader
         else:
-            train_set, valid_set = split_training_data_to_validation_set(0.1)
+            training_set, valid_set = split_training_data_to_validation_set(0.1)
 
         train_acc_per_epoch = []
         val_acc_per_epoch = []
@@ -95,7 +95,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         for i in range(epochs):
             train_losses = []
             valid_losses = []
-            for data, label in train_set:
+            for data, label in training_set:
                 optimizer.zero_grad()
 
                 # flatten the image batch to vector of size 28*28
@@ -123,7 +123,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
                 valid_losses.append(loss.detach())
 
             # calculate accuracies and losses
-            train_acc = self.calculate_accuracy(train_set)
+            train_acc = self.calculate_accuracy(training_set)
             val_acc = self.calculate_accuracy(valid_set)
 
             train_losses = np.mean(train_losses)
@@ -191,6 +191,7 @@ def load_dataset() -> None:
     mnist_transforms = transforms.Compose([transform_to_tensor, normalize])
 
     # load the data: train and test sets
+    global train_set
     train_set = torchvision.datasets.FashionMNIST("./data", download=True, transform=mnist_transforms)
     test_set = torchvision.datasets.FashionMNIST("./data", download=True, train=False, transform=mnist_transforms)
     print('train set len', len(train_set))
@@ -202,13 +203,14 @@ def load_dataset() -> None:
     test_loader = DataLoader(test_set, shuffle=True, batch_size=64)
 
 
-def split_training_data_to_validation_set(percent_of_training_set: float) -> tuple[DataLoader, DataLoader]:
+def split_training_data_to_validation_set(percent_of_training_set: float) -> DataLoader:
     """
     Function for implement single forward step on network
     :param percent_of_training_set: percent of training set size (0-1)
     :return: two DataLoader objects - training and validation
     """
 
+    global train_set
     # preparation
     indices = list(range(len(train_set)))
     np.random.shuffle(indices)
