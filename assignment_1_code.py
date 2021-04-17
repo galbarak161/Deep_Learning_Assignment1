@@ -1,4 +1,7 @@
 import copy
+import time
+import os
+
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -13,7 +16,6 @@ test_loader = []
 train_set = []
 FashionMNIST_features = 28 * 28
 FashionMNIST_classes = 10
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class GenericFeedforwardNetwork(torch.nn.Module):
@@ -51,6 +53,9 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         # initialize the output layer with log-soft-max activation function
         self.log_softmax = torch.nn.LogSoftmax(dim=1)
 
+        self.loss_function = None
+        self.optimizer = None
+
     def forward(self, x: object) -> object:
         """
         Function for implement single forward step on network
@@ -68,13 +73,12 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         """
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
-    def train_model(self, optimizer: torch, epochs: int, loss_function, use_entire_training_set=True) -> None:
+    def train_model(self, epochs: int, plot_name: str,use_entire_training_set=True) -> None:
         """
         Function to handle network learning step
-        :param optimizer: torch optimizer after initialization
         :param epochs: number of epochs
-        :param loss_function: torch loss function after initialization
-        :param use_entire_training_set: bolean flag for using entire dataset
+        :param plot_name: the name of the plot file to save
+        :param use_entire_training_set: boolean flag for using entire dataset
         """
         global train_loader, valid_loader
 
@@ -96,7 +100,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             train_losses = []
             valid_losses = []
             for data, label in training_set:
-                optimizer.zero_grad()
+                self.optimizer.zero_grad()
 
                 # flatten the image batch to vector of size 28*28
                 data = data.view(-1, FashionMNIST_features)
@@ -105,11 +109,11 @@ class GenericFeedforwardNetwork(torch.nn.Module):
                 y_prediction = self(data)
 
                 # calculate loss
-                loss = loss_function(y_prediction, label)
+                loss = self.loss_function(y_prediction, label)
 
                 # backpropagation
                 loss.backward()
-                optimizer.step()
+                self.optimizer.step()
                 train_losses.append(loss.detach())
 
             # check performers on validation set
@@ -119,7 +123,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
 
                 # calculate output and loss for validation
                 y_hat = self(data)
-                loss = loss_function(y_hat, label)
+                loss = self.loss_function(y_hat, label)
                 valid_losses.append(loss.detach())
 
             # calculate accuracies and losses
@@ -137,19 +141,24 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             val_loss_per_epoch.append(valid_losses)
 
         # plot the results
+
+        acc_plot = plot_name + '_acc.png'
+        fig = plt.figure()
         plt.title('Train and validation sets accuracy per epoch')
         plt.plot(train_acc_per_epoch, label='Train Accuracy')
         plt.plot(val_acc_per_epoch, label='Validation Accuracy')
         plt.xticks(range(epochs))
         plt.legend()
-        plt.show()
+        fig.savefig(os.path.join(plot_directory, acc_plot))
 
+        loss_plot = plot_name + '_loss.png'
+        fig = plt.figure()
         plt.title('Train and validation sets losses per epoch')
         plt.plot(train_loss_per_epoch, label='Train Loss')
         plt.plot(val_loss_per_epoch, label='Validation Loss')
         plt.xticks(range(epochs))
         plt.legend()
-        plt.show()
+        fig.savefig(os.path.join(plot_directory, loss_plot))
 
     def calculate_accuracy(self, dataset_loader) -> float:
         """
@@ -183,6 +192,8 @@ def load_dataset() -> None:
     The function loads dataset from FashionMNIST and prepare the DataLoader objects
     :return: train_loader, valid_loader, test_loader (update global variables)
     """
+
+    print('\nLoad dataset...')
 
     # create normalize MNIST transform
     # TODO: change to the right numbers
@@ -241,13 +252,13 @@ def one_hidden_layer_no_activation(number_of_neurons: int) -> None:
     print('\nFunction 2: one_hidden_layer_no_activation')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons], FashionMNIST_classes, 'none')
 
-    loss_function = torch.nn.CrossEntropyLoss()
+    model.loss_function = torch.nn.CrossEntropyLoss()
     learning_rate = 0.01
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    model.optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     epochs = 50
 
     # train the model
-    model.train_model(optimizer, epochs, loss_function)
+    model.train_model(epochs, 'Func2')
 
     # print results on train and test sets
     print("train accuracy : %.4f" % model.calculate_accuracy(train_loader))
@@ -265,13 +276,13 @@ def two_hidden_layers_sigmoid(number_of_neurons: int) -> None:
     print('\nFunction 3: two_hidden_layers_sigmoid')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'sigmoid')
 
-    loss_function = torch.nn.CrossEntropyLoss()
+    model.loss_function = torch.nn.CrossEntropyLoss()
     learning_rate = 0.1
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    model.optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     epochs = 20
 
     # train the model
-    model.train_model(optimizer, epochs, loss_function)
+    model.train_model(epochs, 'Func3')
 
     # print results on train and test sets
     print("train accuracy : %.4f" % model.calculate_accuracy(train_loader))
@@ -289,7 +300,6 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
 
     print('\nFunction 4: two_hidden_layers_relu')
 
-    loss_function = torch.nn.CrossEntropyLoss()
     learning_rate = 0.01
     epochs = 20
 
@@ -300,10 +310,11 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
     while learning_rate < 1:
         # create new model and new optimizer
         model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'relu')
-        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+        model.loss_function = torch.nn.CrossEntropyLoss()
+        model.optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
         # train the model with current optimizer
-        model.train_model(optimizer, epochs, loss_function)
+        model.train_model(epochs, f'Func4_lr_{learning_rate}')
 
         val_acc = model.calculate_accuracy(valid_loader)
 
@@ -313,7 +324,7 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
             best_accuracy = val_acc
             best_model = copy.deepcopy(model)
 
-        learning_rate += 0.3
+        learning_rate += 0.2
 
     train_acc = best_model.calculate_accuracy(train_loader)
     test_acc = best_model.calculate_accuracy(test_loader)
@@ -328,40 +339,24 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
     Train the network with decreasing learning rate
     """
 
+    # Todo: implement lr decay with scheduler
     global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader, valid_loader
 
     print('\nFunction 5: two_hidden_layers_relu_SGD_decreasing_lr')
 
-    loss_function = torch.nn.CrossEntropyLoss()
+    model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'relu')
+
     learning_rate = 0.01
+    model.optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    model.loss_function = torch.nn.CrossEntropyLoss()
     epochs = 20
 
-    # find the best lr with validation set
-    best_accuracy = 0
-    best_model = None
+    # train the model
+    model.train_model(epochs, 'Func5')
 
-    while learning_rate > 0:
-        # create new model and new optimizer
-        model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'relu')
-        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-
-        # train the model with current optimizer
-        model.train_model(optimizer, epochs, loss_function)
-
-        val_acc = model.calculate_accuracy(valid_loader)
-
-        print("Learning Rate: {:.4}: Validation Set Accuracy: {:.4}".format(learning_rate, val_acc))
-
-        if val_acc > best_accuracy:
-            best_accuracy = val_acc
-            best_model = copy.deepcopy(model)
-
-        learning_rate -= 0.002
-
-    train_acc = best_model.calculate_accuracy(train_loader)
-    test_acc = best_model.calculate_accuracy(test_loader)
-    print("train accuracy : %.4f" % train_acc)
-    print("test accuracy : %.4f" % test_acc)
+    # print results on train and test sets
+    print("train accuracy : %.4f" % model.calculate_accuracy(train_loader))
+    print("test accuracy : %.4f" % model.calculate_accuracy(test_loader))
 
 
 def two_hidden_layers_relu_adam(number_of_neurons: int) -> None:
@@ -376,13 +371,13 @@ def two_hidden_layers_relu_adam(number_of_neurons: int) -> None:
     print('\nFunction 6: two_hidden_layers_relu_adam')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 2, FashionMNIST_classes, 'relu')
 
-    loss_function = torch.nn.CrossEntropyLoss()
+    model.loss_function = torch.nn.CrossEntropyLoss()
     learning_rate = 0.001
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     epochs = 30
 
     # train the model
-    model.train_model(optimizer, epochs, loss_function)
+    model.train_model(epochs, 'Func6')
 
     # print results on train and test sets
     print("train accuracy : %.4f" % model.calculate_accuracy(train_loader))
@@ -401,13 +396,13 @@ def four_hidden_layers_adam(number_of_neurons: int) -> None:
     print('\nFunction 7: four_hidden_layers_adam')
     model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 4, FashionMNIST_classes, 'relu')
 
-    loss_function = torch.nn.CrossEntropyLoss()
+    model.loss_function = torch.nn.CrossEntropyLoss()
     learning_rate = 0.001
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     epochs = 250
 
     # train the model
-    model.train_model(optimizer, epochs, loss_function, False)
+    model.train_model(epochs, 'Func7', False)
 
     # print results on train and test sets
     print("train accuracy : %.4f" % model.calculate_accuracy(train_loader))
@@ -415,7 +410,29 @@ def four_hidden_layers_adam(number_of_neurons: int) -> None:
 
 
 def four_hidden_layers_adam_weight_decay(number_of_neurons):
-    pass
+    """
+    Function 8:
+    Same as Function 6. with 4 hidden layers.
+    Use Adam as optimizer with weight decay as regularization method
+    """
+    global FashionMNIST_features, FashionMNIST_classes, train_loader, test_loader
+
+    print('\nFunction 8: four_hidden_layers_adam_weight_decay')
+    model = GenericFeedforwardNetwork(FashionMNIST_features, [number_of_neurons] * 4, FashionMNIST_classes, 'relu')
+
+    model.loss_function = torch.nn.CrossEntropyLoss()
+    learning_rate = 0.001
+    # TODO: check the optimal weight_decay value
+    weight_decay_value = 0.001
+    model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay_value)
+    epochs = 250
+
+    # train the model
+    model.train_model(epochs, 'Func6')
+
+    # print results on train and test sets
+    print("train accuracy : %.4f" % model.calculate_accuracy(train_loader))
+    print("test accuracy : %.4f" % model.calculate_accuracy(test_loader))
 
 
 def four_hidden_layers_adam_early_stopping(number_of_neurons):
@@ -423,27 +440,98 @@ def four_hidden_layers_adam_early_stopping(number_of_neurons):
 
 
 def main():
+    start = time.time()
     load_dataset()
+    end = time.time()
+    print_time(end - start)
 
     # 4 neurons per layer
     number_of_neurons = 4
+
+    start = time.time()
     one_hidden_layer_no_activation(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     two_hidden_layers_sigmoid(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     two_hidden_layers_relu(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     two_hidden_layers_relu_adam(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
 
     # 32 neurons per layer
     number_of_neurons = 32
+
+    start = time.time()
     one_hidden_layer_no_activation(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     two_hidden_layers_sigmoid(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     two_hidden_layers_relu(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     two_hidden_layers_relu_adam(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     four_hidden_layers_adam(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     four_hidden_layers_adam_weight_decay(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+    start = time.time()
     four_hidden_layers_adam_early_stopping(number_of_neurons)
+    end = time.time()
+    print_time(end - start)
+
+
+def print_time(time_taken: float) -> None:
+    """
+    Utility function for time printing
+    :param time_taken: the time we need to print
+    """
+    hours, rem = divmod(time_taken, 3600)
+    minutes, seconds = divmod(rem, 60)
+    print("\tTime taken: {:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds))
 
 
 if __name__ == '__main__':
+    # create a directory for saving plots
+    plot_directory = os.path.join(os.getcwd(), '/images/')
+    if not os.path.exists(plot_directory):
+        os.makedirs(plot_directory)
+    print('plot images to:', plot_directory)
     main()
+
