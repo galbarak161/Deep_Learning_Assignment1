@@ -131,7 +131,7 @@ def four_hidden_layers_adam(number_of_neurons: int) -> None:
     """
     Function 7:
     Same as Function 6. with 4 hidden layers.
-    Use Adam as optimizer with lr=0.001 with only 10% of the training set for training
+    Use Adam as optimizer with lr=0.001
     """
 
     print('\nFunction 7: four_hidden_layers_adam')

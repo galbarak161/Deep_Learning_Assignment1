@@ -35,7 +35,7 @@ def main():
     # 4 neurons per layer
     number_of_neurons = 4
 
-    """start = time.time()
+    start = time.time()
     functions.one_hidden_layer_no_activation(number_of_neurons)
     end = time.time()
     print_time(end - start)
@@ -98,7 +98,7 @@ def main():
     start = time.time()
     functions.four_hidden_layers_adam_weight_decay(number_of_neurons)
     end = time.time()
-    print_time(end - start)"""
+    print_time(end - start)
 
     start = time.time()
     functions.four_hidden_layers_adam_early_stopping(number_of_neurons)

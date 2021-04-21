@@ -67,12 +67,21 @@ def split_training_data_to_validation_set(percent_of_training_set: float) -> Non
 
 
 def get_train_loader() -> DataLoader:
+    """
+    getter function for train_loader
+    """
     return train_loader
 
 
 def get_validation_loader() -> DataLoader:
+    """
+    getter function for valid_loader
+    """
     return valid_loader
 
 
 def get_test_loader() -> DataLoader:
+    """
+    getter function for test_loader
+    """
     return test_loader

@@ -10,30 +10,6 @@ plot_directory: str
 last_model_directory: str
 
 
-def create_new_network(number_of_neurons: int, number_of_hidden_layers: int,
-                       activation_function: str, optimizer: str, learning_rate: float,
-                       use_decreasing_learning=False, weight_decay=0.):
-    model = GenericFeedforwardNetwork(FashionMNIST_features,
-                                      [number_of_neurons] * number_of_hidden_layers,
-                                      FashionMNIST_classes,
-                                      activation_function).to(get_device())
-    if optimizer == 'SGD':
-        model.optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-
-    elif optimizer == 'Adam':
-        if weight_decay > 0:
-            model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        else:
-            model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-
-    if use_decreasing_learning:
-        # TODO: check the value of step_size
-        model.scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, step_size=5, gamma=0.1, last_epoch=-1)
-
-    print(model)
-    return model
-
-
 class GenericFeedforwardNetwork(torch.nn.Module):
     # Define dictionary of non linear activation functions
     non_linear_activation_fun = {'relu': torch.nn.ReLU, 'tanh': torch.nn.Tanh, 'sigmoid': torch.nn.Sigmoid}
@@ -225,3 +201,40 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             n_total += data.shape[0]
 
         return (n_correct / n_total).item()
+
+
+def create_new_network(number_of_neurons: int, number_of_hidden_layers: int,
+                       activation_function: str, optimizer: str, learning_rate: float,
+                       use_decreasing_learning=False, weight_decay=0) -> GenericFeedforwardNetwork:
+    """
+    function to create new GenericFeedforwardNetwork model with optimizer
+   :param number_of_neurons: number of features for input layer
+   :param number_of_hidden_layers: number of hidden layers
+   :param activation_function: string that represent valid activation_function
+   :param optimizer: string that represent valid optimizer
+   :param learning_rate: float value of the learning rate
+   :param use_decreasing_learning: boolean flag for using decreasing_learning with scheduler
+   :param weight_decay: the weight decay parameters for Adam optimizer
+   :return: new GenericFeedforwardNetwork model
+   """
+    model = GenericFeedforwardNetwork(FashionMNIST_features,
+                                      [number_of_neurons] * number_of_hidden_layers,
+                                      FashionMNIST_classes,
+                                      activation_function).to(get_device())
+    if optimizer == 'SGD':
+        model.optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
+    elif optimizer == 'Adam':
+        if weight_decay > 0:
+            model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        else:
+            model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    if use_decreasing_learning:
+        # TODO: check the value of step_size
+        model.scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, step_size=5, gamma=0.1, last_epoch=-1)
+
+    print(model)
+    print()
+
+    return model
