@@ -3,26 +3,23 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
-
 from assignment_1_code import get_device
-from dataset import FashionMNIST_features, FashionMNIST_classes, split_training_data_to_validation_set, get_train_data
+from dataset import FashionMNIST_features, FashionMNIST_classes, get_train_loader, get_validation_loader
 
-plot_directory = ''
+plot_directory: str
+last_model_directory: str
 
 
 def create_new_network(number_of_neurons: int, number_of_hidden_layers: int,
-                       activation_function: str, loss_function: str, optimizer: str, learning_rate: float,
+                       activation_function: str, optimizer: str, learning_rate: float,
                        use_decreasing_learning=False, weight_decay=0.):
     model = GenericFeedforwardNetwork(FashionMNIST_features,
                                       [number_of_neurons] * number_of_hidden_layers,
                                       FashionMNIST_classes,
                                       activation_function).to(get_device())
-
-    if loss_function == 'cross_entropy':
-        model.loss_function = torch.nn.CrossEntropyLoss()
-
     if optimizer == 'SGD':
         model.optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+
     elif optimizer == 'Adam':
         if weight_decay > 0:
             model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -71,8 +68,8 @@ class GenericFeedforwardNetwork(torch.nn.Module):
 
         # initialize the output layer with log-soft-max activation function
         self.log_softmax = torch.nn.LogSoftmax(dim=1)
+        self.loss_function = torch.nn.CrossEntropyLoss()
 
-        self.loss_function = None
         self.optimizer = None
         self.scheduler = None
 
@@ -93,31 +90,34 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         """
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
-    def train_model(self, epochs: int, plot_name: str, compute_loss=False, use_entire_training_set=True) -> None:
+    def train_model(self, epochs: int, plot_name: str,
+                    compute_loss=False, do_early_stopping=False, patience=20) -> None:
         """
         Function to handle network learning step
         :param epochs: number of epochs
         :param plot_name: the name of the plot file to save
         :param compute_loss: boolean flag for loss computing
-        :param use_entire_training_set: boolean flag for using entire dataset
+        :param do_early_stopping: boolean flag for early stopping Regularization
+        :param patience: patience to prevent over-fitting in early stopping
         """
+
         # for debug
         # epochs = 1
-
-        if use_entire_training_set:
-            training_set, valid_set = get_train_data(0.8)
-        else:
-            training_set, valid_set = split_training_data_to_validation_set(0.1)
 
         train_acc_per_epoch = []
         val_acc_per_epoch = []
         train_loss_per_epoch = []
         val_loss_per_epoch = []
 
+        last_acc_improved = -np.inf
+        patience_counter = 0
+
         for i in range(epochs):
             train_losses = []
             valid_losses = []
-            for data, label in training_set:
+            train_set = get_train_loader()
+            valid_set = get_validation_loader()
+            for data, label in train_set:
                 self.optimizer.zero_grad()
 
                 # flatten the image batch to vector of size 28*28
@@ -138,9 +138,25 @@ class GenericFeedforwardNetwork(torch.nn.Module):
                     self.scheduler.step()
 
             # calculate accuracies and losses
-            train_acc = self.calculate_accuracy(training_set)
+            train_acc = self.calculate_accuracy(train_set)
             val_acc = self.calculate_accuracy(valid_set)
             train_losses = np.mean(train_losses)
+
+            if do_early_stopping:
+                if val_acc < last_acc_improved:
+                    patience_counter += 1
+                else:
+                    # saving the model
+                    path_to_model = os.path.join(last_model_directory, 'model.pth')
+                    torch.save(self.state_dict(), path_to_model)
+
+                    last_acc_improved = val_acc
+                    patience_counter = 0
+
+                # stop the learning if the accuracy hasn't improved for the last {patience} iterations
+                if patience_counter >= patience:
+                    print(f'Early stopping finished after {i} iterations')
+                    break
 
             if compute_loss:
                 # check performers on validation set for loss computing
@@ -208,5 +224,4 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             n_correct += torch.sum(predictions == label.to(get_device())).type(torch.float32)
             n_total += data.shape[0]
 
-        acc = (n_correct / n_total).item()
-        return acc
+        return (n_correct / n_total).item()

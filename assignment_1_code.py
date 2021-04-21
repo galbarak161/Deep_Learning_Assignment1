@@ -3,7 +3,7 @@ import os
 import functions
 import torch
 import generic_module
-from dataset import load_dataset
+from dataset import load_dataset, split_training_data_to_validation_set
 
 device = torch.device('cpu')
 
@@ -23,7 +23,7 @@ def print_time(time_taken: float) -> None:
     """
     hours, rem = divmod(time_taken, 3600)
     minutes, seconds = divmod(rem, 60)
-    print("\tTime taken: {:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds))
+    print("\tTime taken: {:0>2}:{:0>2}:{:05.2f}\n".format(int(hours), int(minutes), seconds))
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
     # 4 neurons per layer
     number_of_neurons = 4
 
-    start = time.time()
+    """start = time.time()
     functions.one_hidden_layer_no_activation(number_of_neurons)
     end = time.time()
     print_time(end - start)
@@ -93,10 +93,12 @@ def main():
     end = time.time()
     print_time(end - start)
 
+    split_training_data_to_validation_set(0.1)
+
     start = time.time()
     functions.four_hidden_layers_adam_weight_decay(number_of_neurons)
     end = time.time()
-    print_time(end - start)
+    print_time(end - start)"""
 
     start = time.time()
     functions.four_hidden_layers_adam_early_stopping(number_of_neurons)
@@ -105,10 +107,17 @@ def main():
 
 
 if __name__ == '__main__':
+
+    output_dir = os.path.dirname(os.path.realpath(__file__))
+
     # create a directory for saving plots
-    generic_module.plot_directory = os.path.join(os.getcwd(), '/images/')
+    generic_module.plot_directory = os.path.join(output_dir, 'images')
     if not os.path.exists(generic_module.plot_directory):
         os.makedirs(generic_module.plot_directory)
+
+    generic_module.last_model_directory = os.path.join(output_dir, 'last_model')
+    if not os.path.exists(generic_module.last_model_directory):
+        os.makedirs(generic_module.last_model_directory)
 
     # update torch device
     if torch.cuda.is_available():

@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import numpy as np
 import torchvision
 from torch.utils.data import DataLoader, SubsetRandomSampler
@@ -8,13 +6,10 @@ from torchvision.transforms import transforms
 FashionMNIST_features = 28 * 28
 FashionMNIST_classes = 10
 
-train_loader_80: DataLoader
-valid_loader_20: DataLoader
-
-train_loader_10: DataLoader
-valid_loader_90: DataLoader
-
+train_loader: DataLoader
+valid_loader: DataLoader
 test_loader: DataLoader
+
 train_set: torchvision.datasets
 test_set: torchvision.datasets
 
@@ -28,7 +23,7 @@ def load_dataset():
 
     print('\nLoad dataset...')
 
-    global train_set, test_set, test_loader, train_loader_80, valid_loader_20, train_loader_10, valid_loader_90
+    global train_set, test_set, test_loader
 
     # create normalize MNIST transform
     # TODO: change to the right numbers
@@ -44,13 +39,11 @@ def load_dataset():
     print('test set len', len(test_set))
 
     # create DataLoader object for each set
-    train_loader_80, valid_loader_20 = split_training_data_to_validation_set(0.8)
-    train_loader_10, valid_loader_90 = split_training_data_to_validation_set(0.1)
-
+    split_training_data_to_validation_set(0.8)
     test_loader = DataLoader(test_set, shuffle=True, batch_size=64)
 
 
-def split_training_data_to_validation_set(percent_of_training_set: float):
+def split_training_data_to_validation_set(percent_of_training_set: float) -> None:
     """
     Function to split train set into train and validation
     :param percent_of_training_set: percent of training set size (0-1)
@@ -64,25 +57,21 @@ def split_training_data_to_validation_set(percent_of_training_set: float):
     train_sample = SubsetRandomSampler(indices[:split])
     valid_sample = SubsetRandomSampler(indices[split:])
 
+    print(f'split training data to {percent_of_training_set} train and {1 - percent_of_training_set} validation')
     print('train sample len', len(train_sample))
     print('valid sample len', len(valid_sample))
 
+    global train_loader, valid_loader
     train_loader = DataLoader(train_set, sampler=train_sample, batch_size=64)
     valid_loader = DataLoader(train_set, sampler=valid_sample, batch_size=64)
 
-    return train_loader, valid_loader
+
+def get_train_loader() -> DataLoader:
+    return train_loader
 
 
-def get_train_data(percent_of_training_set: float) -> Tuple[DataLoader, DataLoader]:
-    """
-    Getter function to train and validation set
-    :param percent_of_training_set: percent of training set size (0-1)
-    :return: two DataLoader objects - training and validation
-    """
-    if percent_of_training_set == 0.1:
-        return train_loader_80, valid_loader_20
-
-    return train_loader_80, valid_loader_20
+def get_validation_loader() -> DataLoader:
+    return valid_loader
 
 
 def get_test_loader() -> DataLoader:
