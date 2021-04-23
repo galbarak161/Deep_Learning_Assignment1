@@ -1,5 +1,10 @@
 import copy
+import os
+
+import torch
+
 from dataset import get_test_loader, get_train_loader, get_validation_loader
+import generic_module
 from generic_module import create_new_network, get_device
 
 
@@ -184,7 +189,9 @@ def four_hidden_layers_adam_early_stopping(number_of_neurons):
 
     # train the model
     epochs = 250
+    path_to_model = os.path.join(generic_module.last_model_directory, 'model.pth')
     model.train_model(epochs, 'Func9', compute_loss=True, do_early_stopping=True)
+    model.load_state_dict(torch.load(path_to_model))
 
     # print results on train and test sets
     print("\ntrain accuracy : %.4f" % model.calculate_accuracy(get_train_loader()))

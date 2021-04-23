@@ -85,6 +85,12 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         train_loss_per_epoch = []
         val_loss_per_epoch = []
 
+        # parameters from early stop
+        best_early_stop_val_loss_per_epoch = []
+        best_early_stop_train_acc_per_epoch = []
+        best_early_stop_val_acc_per_epoch = []
+        best_early_stop_train_loss_per_epoch = []
+        path_to_model = ''
         last_acc_improved = -np.inf
         patience_counter = 0
 
@@ -125,7 +131,10 @@ class GenericFeedforwardNetwork(torch.nn.Module):
                     # saving the model
                     path_to_model = os.path.join(last_model_directory, 'model.pth')
                     torch.save(self.state_dict(), path_to_model)
-
+                    best_early_stop_val_loss_per_epoch = val_loss_per_epoch.copy()
+                    best_early_stop_train_acc_per_epoch = train_acc_per_epoch.copy()
+                    best_early_stop_val_acc_per_epoch = val_acc_per_epoch.copy()
+                    best_early_stop_train_loss_per_epoch = train_loss_per_epoch.copy()
                     last_acc_improved = val_acc
                     patience_counter = 0
 
@@ -159,6 +168,13 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             train_acc_per_epoch.append(train_acc)
             val_acc_per_epoch.append(val_acc)
             train_loss_per_epoch.append(train_losses)
+
+        # load the best model from before early stop
+        if do_early_stopping:
+            val_loss_per_epoch = best_early_stop_val_loss_per_epoch.copy()
+            train_acc_per_epoch = best_early_stop_train_acc_per_epoch.copy()
+            val_acc_per_epoch = best_early_stop_val_acc_per_epoch.copy()
+            train_loss_per_epoch = best_early_stop_train_loss_per_epoch.copy()
 
         # plot the results
         acc_plot = plot_name + '_acc.png'
