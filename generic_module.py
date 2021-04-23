@@ -16,7 +16,8 @@ class GenericFeedforwardNetwork(torch.nn.Module):
     optimizing_func = {'SGD': torch.optim.SGD, 'Adam': torch.optim.Adam}
 
     def __init__(self, n_features: int, n_hidden_units_per_layer: list, n_outputs: int, activation_fun: str,
-                 learning_rate: float, optimizer: str, use_decreasing_learning=False, weight_decay=0):
+                 learning_rate: float, optimizer: str, use_decreasing_learning=False, weight_decay=0,
+                 scheduler_gamma=0.1):
         """
         Constructor for Generic feed-forward network model
         :param n_features: number of features for input layer
@@ -57,7 +58,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             self.optimizer = self.optimizing_func[optimizer](self.parameters(), lr=learning_rate,
                                                              weight_decay=weight_decay)
         if use_decreasing_learning:
-            self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=3, gamma=0.1)
+            self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=3, gamma=scheduler_gamma)
 
         print('Initialized Model:')
         print(self)

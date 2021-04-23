@@ -117,7 +117,8 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
         activation_fun='relu',
         learning_rate=0.01,
         optimizer='SGD',
-        use_decreasing_learning=True
+        use_decreasing_learning=True,
+        scheduler_gamma=0.75
     )
 
     # train the model
