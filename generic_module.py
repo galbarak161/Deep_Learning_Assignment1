@@ -92,7 +92,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         """
 
         # for debug
-        epochs = 2
+        # epochs = 1
 
         train_acc_per_epoch = []
         val_acc_per_epoch = []
