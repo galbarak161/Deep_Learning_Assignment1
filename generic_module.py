@@ -46,9 +46,6 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         self.log_softmax = torch.nn.LogSoftmax(dim=1)
         self.loss_function = torch.nn.CrossEntropyLoss()
 
-        self.optimizer = None
-        self.scheduler = None
-
     def forward(self, x: object) -> object:
         """
         Function for implement single forward step on network
@@ -116,8 +113,8 @@ class GenericFeedforwardNetwork(torch.nn.Module):
                 self.optimizer.step()
                 train_losses.append(loss.detach())
 
-                if self.scheduler is not None:
-                    self.scheduler.step()
+            if self.scheduler is not None:
+                self.scheduler.step()
 
             # calculate accuracies and losses
             train_acc = self.calculate_accuracy(train_set)
@@ -247,7 +244,7 @@ def create_new_network(number_of_neurons: int, number_of_hidden_layers: int,
             model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     if use_decreasing_learning:
-        # TODO: check the value of step_size
+        # TODO: check the value of step_size and gamma (decrease l_r by {gamma} after each {step_size} epochs)
         model.scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, step_size=5, gamma=0.1, last_epoch=-1)
 
     print(model)
