@@ -6,7 +6,7 @@ import generic_module
 
 from assignment_1_code import get_device
 from dataset import get_test_loader, get_train_loader, get_validation_loader
-from mnist_fasion_module import MnistFashionFeedforwardNetwork
+from mnist_fashion_module import MnistFashionFeedforwardNetwork
 
 
 def one_hidden_layer_no_activation(number_of_neurons: int) -> None:
