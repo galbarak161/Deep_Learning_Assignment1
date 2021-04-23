@@ -26,8 +26,9 @@ def load_dataset():
     global train_set, test_set, test_loader
 
     # create normalize MNIST transform
-    # TODO: change to the right numbers
-    normalize = transforms.Normalize((0.1307,), (0.3081,))
+    dataMean = 0.2860405969887955
+    dataStd = 0.35302424451492237
+    normalize = transforms.Normalize((dataMean,), (dataStd,))
     transform_to_tensor = transforms.ToTensor()
     mnist_transforms = transforms.Compose([transform_to_tensor, normalize])
 
@@ -40,7 +41,7 @@ def load_dataset():
 
     # create DataLoader object for each set
     split_training_data_to_validation_set(0.8)
-    test_loader = DataLoader(test_set, shuffle=True, batch_size=64)
+    test_loader = DataLoader(test_set, batch_size=64)
 
 
 def split_training_data_to_validation_set(percent_of_training_set: float) -> None:

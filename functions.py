@@ -2,10 +2,11 @@ import copy
 import os
 
 import torch
-
-from dataset import get_test_loader, get_train_loader, get_validation_loader
 import generic_module
-from generic_module import create_new_network, get_device
+
+from assignment_1_code import get_device
+from dataset import get_test_loader, get_train_loader, get_validation_loader
+from mnist_fasion_module import MnistFashionFeedforwardNetwork
 
 
 def one_hidden_layer_no_activation(number_of_neurons: int) -> None:
@@ -18,12 +19,17 @@ def one_hidden_layer_no_activation(number_of_neurons: int) -> None:
     """
 
     print('\nFunction 2: one_hidden_layer_no_activation')
-    learning_rate = 0.01
-    model = create_new_network(number_of_neurons, 1, 'none', 'SGD', learning_rate)
+
+    model = MnistFashionFeedforwardNetwork(
+        n_hidden_units_per_layer=[number_of_neurons],
+        activation_fun='none',
+        learning_rate=0.01,
+        optimizer='SGD',
+    )
 
     # train the model
     epochs = 50
-    model.train_model(epochs, 'Func2', compute_loss=False)
+    model.train_model(epochs, 'Func2')
 
     # print results on train and test sets
     print("\ntrain accuracy : %.4f" % model.calculate_accuracy(get_train_loader()))
@@ -37,12 +43,17 @@ def two_hidden_layers_sigmoid(number_of_neurons: int) -> None:
     """
 
     print('\nFunction 3: two_hidden_layers_sigmoid')
-    learning_rate = 0.1
-    model = create_new_network(number_of_neurons, 2, 'sigmoid', 'SGD', learning_rate)
+
+    model = MnistFashionFeedforwardNetwork(
+        n_hidden_units_per_layer=[number_of_neurons] * 2,
+        activation_fun='sigmoid',
+        learning_rate=0.1,
+        optimizer='SGD',
+    )
 
     # train the model
     epochs = 20
-    model.train_model(epochs, 'Func3', compute_loss=False)
+    model.train_model(epochs, 'Func3')
 
     # print results on train and test sets
     print("\ntrain accuracy : %.4f" % model.calculate_accuracy(get_train_loader()))
@@ -58,8 +69,7 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
 
     print('\nFunction 4: two_hidden_layers_relu')
 
-    # Todo: check start value of learning_rate
-    learning_rate = 0.6
+    learning_rate = 0.01
     epochs = 20
 
     # find the best lr with validation set
@@ -68,7 +78,12 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
 
     while learning_rate < 1:
         # create new model and new optimizer
-        model = create_new_network(number_of_neurons, 2, 'relu', 'SGD', learning_rate)
+        model = MnistFashionFeedforwardNetwork(
+            n_hidden_units_per_layer=[number_of_neurons] * 2,
+            activation_fun='relu',
+            learning_rate=learning_rate,
+            optimizer='SGD',
+        )
 
         # train the model with current optimizer
         model.train_model(epochs, f'Func4_lr_{learning_rate}')
@@ -81,8 +96,7 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
             best_accuracy = val_acc
             best_model = copy.deepcopy(model).to(get_device())
 
-        # TODO: check the learning_rate step
-        learning_rate += 0.2
+        learning_rate += 0.03
 
     # print results on train and test sets
     print("\ntrain accuracy : %.4f" % best_model.calculate_accuracy(get_train_loader()))
@@ -98,13 +112,17 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
 
     print('\nFunction 5: two_hidden_layers_relu_SGD_decreasing_lr')
 
-    learning_rate = 0.01
-    use_decreasing_learning = True
-    model = create_new_network(number_of_neurons, 2, 'relu', 'SGD', learning_rate, use_decreasing_learning)
+    model = MnistFashionFeedforwardNetwork(
+        n_hidden_units_per_layer=[number_of_neurons] * 2,
+        activation_fun='relu',
+        learning_rate=0.01,
+        optimizer='SGD',
+        use_decreasing_learning=True
+    )
 
     # train the model
     epochs = 20
-    model.train_model(epochs, 'Func5', compute_loss=False)
+    model.train_model(epochs, 'Func5')
 
     # print results on train and test sets
     print("\ntrain accuracy : %.4f" % model.calculate_accuracy(get_train_loader()))
@@ -120,12 +138,16 @@ def two_hidden_layers_relu_adam(number_of_neurons: int) -> None:
 
     print('\nFunction 6: two_hidden_layers_relu_adam')
 
-    learning_rate = 0.001
-    model = create_new_network(number_of_neurons, 2, 'relu', 'Adam', learning_rate)
+    model = MnistFashionFeedforwardNetwork(
+        n_hidden_units_per_layer=[number_of_neurons] * 2,
+        activation_fun='relu',
+        learning_rate=0.001,
+        optimizer='Adam',
+    )
 
     # train the model
     epochs = 30
-    model.train_model(epochs, 'Func6', compute_loss=False)
+    model.train_model(epochs, 'Func6')
 
     # print results on train and test sets
     print("\ntrain accuracy : %.4f" % model.calculate_accuracy(get_train_loader()))
@@ -140,12 +162,17 @@ def four_hidden_layers_adam(number_of_neurons: int) -> None:
     """
 
     print('\nFunction 7: four_hidden_layers_adam')
-    learning_rate = 0.001
-    model = create_new_network(number_of_neurons, 4, 'relu', 'Adam', learning_rate)
+
+    model = MnistFashionFeedforwardNetwork(
+        n_hidden_units_per_layer=[number_of_neurons] * 4,
+        activation_fun='relu',
+        learning_rate=0.001,
+        optimizer='Adam',
+    )
 
     # train the model
     epochs = 30
-    model.train_model(epochs, 'Func7', compute_loss=False)
+    model.train_model(epochs, 'Func7')
 
     # print results on train and test sets
     print("\ntrain accuracy : %.4f" % model.calculate_accuracy(get_train_loader()))
@@ -160,11 +187,15 @@ def four_hidden_layers_adam_weight_decay(number_of_neurons):
     """
 
     print('\nFunction 8: four_hidden_layers_adam_weight_decay')
-    learning_rate = 0.001
 
-    # TODO: check the value of weight_decay
     weight_decay = 0.001
-    model = create_new_network(number_of_neurons, 4, 'relu', 'Adam', learning_rate, weight_decay=weight_decay)
+    model = MnistFashionFeedforwardNetwork(
+        n_hidden_units_per_layer=[number_of_neurons] * 4,
+        activation_fun='relu',
+        learning_rate=0.001,
+        optimizer='Adam',
+        weight_decay=weight_decay
+    )
 
     # train the model
     epochs = 250
@@ -184,8 +215,12 @@ def four_hidden_layers_adam_early_stopping(number_of_neurons):
 
     print('\nFunction 9: four_hidden_layers_adam_early_stopping')
 
-    learning_rate = 0.001
-    model = create_new_network(number_of_neurons, 2, 'relu', 'Adam', learning_rate)
+    model = MnistFashionFeedforwardNetwork(
+        n_hidden_units_per_layer=[number_of_neurons] * 4,
+        activation_fun='relu',
+        learning_rate=0.001,
+        optimizer='Adam',
+    )
 
     # train the model
     epochs = 250

@@ -4,7 +4,7 @@ import torch
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
 from assignment_1_code import get_device
-from dataset import FashionMNIST_features, FashionMNIST_classes, get_train_loader, get_validation_loader
+from dataset import FashionMNIST_features, get_train_loader, get_validation_loader
 
 plot_directory: str
 last_model_directory: str
@@ -13,14 +13,19 @@ last_model_directory: str
 class GenericFeedforwardNetwork(torch.nn.Module):
     # Define dictionary of non linear activation functions
     non_linear_activation_fun = {'relu': torch.nn.ReLU, 'tanh': torch.nn.Tanh, 'sigmoid': torch.nn.Sigmoid}
+    optimizing_func = {'SGD': torch.optim.SGD, 'Adam': torch.optim.Adam}
 
-    def __init__(self, n_features: int, n_hidden_units_per_layer: list, n_outputs: int, activation_fun: str):
+    def __init__(self, n_features: int, n_hidden_units_per_layer: list, n_outputs: int, activation_fun: str,
+                 learning_rate: float, optimizer: str, use_decreasing_learning=False, weight_decay=0):
         """
         Constructor for Generic feed-forward network model
         :param n_features: number of features for input layer
         :param n_hidden_units_per_layer: list for hidden layers
         :param n_outputs: number of output classification options
         :param activation_fun: type of non_linear_activation_fun
+        :param learning_rate: float value of the learning rate
+        :param use_decreasing_learning: boolean flag for using decreasing_learning with scheduler
+        :param weight_decay: the weight decay parameters for Adam optimizer
         :return: new model instance
         """
         super().__init__()
@@ -33,22 +38,34 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             else:
                 layers += [
                     torch.nn.Linear(in_dim, out_dim, bias=True),
-                    GenericFeedforwardNetwork.non_linear_activation_fun[activation_fun]()
+                    self.non_linear_activation_fun[activation_fun]()
                 ]
 
         # connect hidden layers to fully connected network
         if activation_fun == 'none':
-            self.fc_layers = torch.nn.Sequential(*layers[:])
+            self.fc_layers = torch.nn.Sequential(*layers)
         else:
             self.fc_layers = torch.nn.Sequential(*layers[:-1])
 
         # initialize the output layer with log-soft-max activation function
         self.log_softmax = torch.nn.LogSoftmax(dim=1)
         self.loss_function = torch.nn.CrossEntropyLoss()
+        self.optimizer = None
+        self.scheduler = None
+
+        if optimizer in self.optimizing_func:
+            self.optimizer = self.optimizing_func[optimizer](self.parameters(), lr=learning_rate,
+                                                             weight_decay=weight_decay)
+        if use_decreasing_learning:
+            self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=3, gamma=0.1)
+
+        print('Initialized Model:')
+        print(self)
+        print()
 
     def forward(self, x: object) -> object:
         """
-        Function for implement single forward step on network
+        Function to implement the forward step of the network
         :param x: inputs (tensor)
         :return: prediction according to tensor inputs (tensor)
         """
@@ -75,7 +92,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         """
 
         # for debug
-        # epochs = 1
+        epochs = 2
 
         train_acc_per_epoch = []
         val_acc_per_epoch = []
@@ -87,7 +104,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         best_early_stop_train_acc_per_epoch = []
         best_early_stop_val_acc_per_epoch = []
         best_early_stop_train_loss_per_epoch = []
-        path_to_model = ''
+
         last_acc_improved = -np.inf
         patience_counter = 0
 
@@ -180,6 +197,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         plt.plot(train_acc_per_epoch, label='Train Accuracy')
         plt.plot(val_acc_per_epoch, label='Validation Accuracy')
         plt.xticks(range(epochs))
+        plt.xticks(rotation=70)
         plt.legend()
         fig.savefig(os.path.join(plot_directory, acc_plot))
 
@@ -190,6 +208,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             plt.plot(train_loss_per_epoch, label='Train Loss')
             plt.plot(val_loss_per_epoch, label='Validation Loss')
             plt.xticks(range(epochs))
+            plt.xticks(rotation=70)
             plt.legend()
             fig.savefig(os.path.join(plot_directory, loss_plot))
 
@@ -214,40 +233,3 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             n_total += data.shape[0]
 
         return (n_correct / n_total).item()
-
-
-def create_new_network(number_of_neurons: int, number_of_hidden_layers: int,
-                       activation_function: str, optimizer: str, learning_rate: float,
-                       use_decreasing_learning=False, weight_decay=0) -> GenericFeedforwardNetwork:
-    """
-    function to create new GenericFeedforwardNetwork model with optimizer
-   :param number_of_neurons: number of features for input layer
-   :param number_of_hidden_layers: number of hidden layers
-   :param activation_function: string that represent valid activation_function
-   :param optimizer: string that represent valid optimizer
-   :param learning_rate: float value of the learning rate
-   :param use_decreasing_learning: boolean flag for using decreasing_learning with scheduler
-   :param weight_decay: the weight decay parameters for Adam optimizer
-   :return: new GenericFeedforwardNetwork model
-   """
-    model = GenericFeedforwardNetwork(FashionMNIST_features,
-                                      [number_of_neurons] * number_of_hidden_layers,
-                                      FashionMNIST_classes,
-                                      activation_function).to(get_device())
-    if optimizer == 'SGD':
-        model.optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-
-    elif optimizer == 'Adam':
-        if weight_decay > 0:
-            model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        else:
-            model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-    if use_decreasing_learning:
-        # TODO: check the value of step_size and gamma (decrease l_r by {gamma} after each {step_size} epochs)
-        model.scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, step_size=5, gamma=0.1, last_epoch=-1)
-
-    print(model)
-    print()
-
-    return model
