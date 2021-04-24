@@ -26,9 +26,9 @@ def load_dataset():
     global train_set, test_set, test_loader
 
     # create normalize MNIST transform
-    dataMean = 0.2860405969887955
-    dataStd = 0.35302424451492237
-    normalize = transforms.Normalize((dataMean,), (dataStd,))
+    data_mean = 0.2860405969887955
+    data_std = 0.35302424451492237
+    normalize = transforms.Normalize((data_mean,), (data_std,))
     transform_to_tensor = transforms.ToTensor()
     mnist_transforms = transforms.Compose([transform_to_tensor, normalize])
 

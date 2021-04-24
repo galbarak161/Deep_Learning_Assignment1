@@ -94,6 +94,7 @@ def main():
     print_time(end - start)
 
     split_training_data_to_validation_set(0.1)
+    print()
 
     start = time.time()
     functions.four_hidden_layers_adam_weight_decay(number_of_neurons)

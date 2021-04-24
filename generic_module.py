@@ -17,7 +17,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
 
     def __init__(self, n_features: int, n_hidden_units_per_layer: list, n_outputs: int, activation_fun: str,
                  learning_rate: float, optimizer: str, use_decreasing_learning=False, weight_decay=0,
-                 scheduler_gamma=0.1):
+                 scheduler_gamma=0.1, scheduler_step_size=3):
         """
         Constructor for Generic feed-forward network model
         :param n_features: number of features for input layer
@@ -26,7 +26,9 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         :param activation_fun: type of non_linear_activation_fun
         :param learning_rate: float value of the learning rate
         :param use_decreasing_learning: boolean flag for using decreasing_learning with scheduler
-        :param weight_decay: the weight decay parameters for Adam optimizer
+        :param weight_decay: the weight decay parameters for optimizer
+        :param scheduler_gamma: gamma value for scheduler optimization
+        :param scheduler_step_size: step size value for scheduler optimization
         :return: new model instance
         """
         super().__init__()
@@ -58,9 +60,10 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             self.optimizer = self.optimizing_func[optimizer](self.parameters(), lr=learning_rate,
                                                              weight_decay=weight_decay)
         if use_decreasing_learning:
-            self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=3, gamma=scheduler_gamma)
+            self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer,
+                                                             step_size=scheduler_step_size, gamma=scheduler_gamma)
 
-        print('Initialized Model:')
+        print('\nInitialized Model:')
         print(self)
         print()
 
@@ -92,9 +95,6 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         :param patience: patience to prevent over-fitting in early stopping
         """
 
-        # for debug
-        # epochs = 1
-
         train_acc_per_epoch = []
         val_acc_per_epoch = []
         train_loss_per_epoch = []
@@ -110,8 +110,9 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         patience_counter = 0
 
         for i in range(epochs):
-            train_losses = []
+            train_loss_for_batch = []
             valid_losses = []
+            train_loss_per_epoch = []
             train_set = get_train_loader()
             valid_set = get_validation_loader()
             for data, label in train_set:
@@ -129,7 +130,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
                 # backpropagation
                 loss.backward()
                 self.optimizer.step()
-                train_losses.append(loss.detach())
+                train_loss_for_batch.append(loss.detach())
 
             if self.scheduler is not None:
                 self.scheduler.step()
@@ -137,7 +138,6 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             # calculate accuracies and losses
             train_acc = self.calculate_accuracy(train_set)
             val_acc = self.calculate_accuracy(valid_set)
-            train_losses = np.mean(train_losses)
 
             if do_early_stopping:
                 if val_acc < last_acc_improved:
@@ -174,16 +174,19 @@ class GenericFeedforwardNetwork(torch.nn.Module):
                 valid_losses = np.mean(valid_losses)
                 val_loss_per_epoch.append(valid_losses)
 
+                mean_loss_per_batch_in_epoch = np.mean(train_loss_for_batch)
+                train_loss_per_epoch.append(mean_loss_per_batch_in_epoch)
+
                 print("epoch {} | train loss : {:.4} | validation loss : {:.4} | train accuracy : {:.4} | validation "
-                      "accuracy : {:.4} ".format(i + 1, train_losses, valid_losses, train_acc, val_acc))
+                      "accuracy : {:.4} ".format(i + 1, mean_loss_per_batch_in_epoch, valid_losses, train_acc, val_acc))
             else:
-                print("epoch {} | train loss : {:.4} | train accuracy : {:.4} | validation "
-                      "accuracy : {:.4} ".format(i + 1, train_losses, train_acc, val_acc))
+                print("epoch {} | train accuracy : {:.4} | validation "
+                      "accuracy : {:.4} ".format(i + 1, train_acc, val_acc))
 
             train_acc_per_epoch.append(train_acc)
             val_acc_per_epoch.append(val_acc)
-            train_loss_per_epoch.append(train_losses)
 
+        print()
         # load the best model from before early stop
         if do_early_stopping:
             val_loss_per_epoch = best_early_stop_val_loss_per_epoch.copy()
@@ -197,10 +200,10 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         plt.title('Train and validation sets accuracy per epoch')
         plt.plot(train_acc_per_epoch, label='Train Accuracy')
         plt.plot(val_acc_per_epoch, label='Validation Accuracy')
-        plt.xticks(range(epochs))
-        plt.xticks(rotation=70)
         plt.legend()
         fig.savefig(os.path.join(plot_directory, acc_plot))
+        plt.close(fig)
+        plt.clf()
 
         if compute_loss:
             loss_plot = plot_name + '_loss.png'
@@ -208,10 +211,10 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             plt.title('Train and validation sets losses per epoch')
             plt.plot(train_loss_per_epoch, label='Train Loss')
             plt.plot(val_loss_per_epoch, label='Validation Loss')
-            plt.xticks(range(epochs))
-            plt.xticks(rotation=70)
             plt.legend()
             fig.savefig(os.path.join(plot_directory, loss_plot))
+            plt.close(fig)
+            plt.clf()
 
     def calculate_accuracy(self, dataset_loader: DataLoader) -> float:
         """
