@@ -112,7 +112,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         for i in range(epochs):
             train_loss_for_batch = []
             valid_losses = []
-            train_loss_per_epoch = []
+
             train_set = get_train_loader()
             valid_set = get_validation_loader()
             for data, label in train_set:

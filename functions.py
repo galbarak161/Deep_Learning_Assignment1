@@ -181,7 +181,7 @@ def four_hidden_layers_adam(number_of_neurons: int) -> None:
 
     # train the model
     epochs = 30
-    model.train_model(epochs, f'{number_of_neurons} - Func7')
+    model.train_model(epochs, f'{number_of_neurons} - Func7', compute_loss=True)
 
     # print results on train and test sets
     print("train accuracy : %.4f" % model.calculate_accuracy(get_train_loader()))
