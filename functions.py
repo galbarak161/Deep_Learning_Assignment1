@@ -119,6 +119,9 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
 
     gamma = 0.8
     step_size = 3
+    if number_of_neurons == 32:
+        step_size = 5
+
     model = MnistFashionFeedforwardNetwork(
         n_hidden_units_per_layer=[number_of_neurons] * 2,
         activation_fun='relu',
