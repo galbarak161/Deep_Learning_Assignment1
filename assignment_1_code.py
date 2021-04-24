@@ -109,7 +109,7 @@ def main():
 
 if __name__ == '__main__':
 
-    output_dir = os.path.dirname(os.path.realpath(__file__))
+    output_dir = os.getcwd()
 
     # create a directory for saving plots
     generic_module.plot_directory = os.path.join(output_dir, 'images')
