@@ -1,4 +1,3 @@
-import time
 import os
 import functions
 import torch
@@ -16,95 +15,30 @@ def get_device() -> torch.device:
     return device
 
 
-def print_time(time_taken: float) -> None:
-    """
-    Utility function for time printing
-    :param time_taken: the time we need to print
-    """
-    hours, rem = divmod(time_taken, 3600)
-    minutes, seconds = divmod(rem, 60)
-    print("\n\tTime taken: {:0>2}:{:0>2}:{:05.2f}\n".format(int(hours), int(minutes), seconds))
-
-
 def main():
-    start = time.time()
     load_dataset()
-    end = time.time()
-    print_time(end - start)
 
     # 4 neurons per layer
     number_of_neurons = 4
-
-    start = time.time()
     functions.one_hidden_layer_no_activation(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.two_hidden_layers_sigmoid(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.two_hidden_layers_relu(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.two_hidden_layers_relu_adam(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
 
     # 32 neurons per layer
     number_of_neurons = 32
-
-    start = time.time()
     functions.one_hidden_layer_no_activation(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.two_hidden_layers_sigmoid(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.two_hidden_layers_relu(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.two_hidden_layers_relu_adam(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.four_hidden_layers_adam(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
 
     split_training_data_to_validation_set(0.1)
-    print()
 
-    start = time.time()
     functions.four_hidden_layers_adam_weight_decay(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
-
-    start = time.time()
     functions.four_hidden_layers_adam_early_stopping(number_of_neurons)
-    end = time.time()
-    print_time(end - start)
 
 
 if __name__ == '__main__':

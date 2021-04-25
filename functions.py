@@ -128,8 +128,8 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
         learning_rate=0.01,
         optimizer='SGD',
         use_decreasing_learning=True,
-        scheduler_gamma=0.8,
-        scheduler_step_size=3
+        scheduler_gamma=gamma,
+        scheduler_step_size=step_size
     )
 
     # train the model
