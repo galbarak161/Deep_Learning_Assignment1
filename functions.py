@@ -128,13 +128,13 @@ def two_hidden_layers_relu_SGD_decreasing_lr(number_of_neurons: int) -> None:
         learning_rate=0.01,
         optimizer='SGD',
         use_decreasing_learning=True,
-        scheduler_gamma=gamma,
-        scheduler_step_size=step_size
+        scheduler_gamma=0.8,
+        scheduler_step_size=3
     )
 
     # train the model
     epochs = 20
-    model.train_model(epochs, f'{number_of_neurons} - Func5_step_{step_size}')
+    model.train_model(epochs, f'{number_of_neurons} - Func5')
 
     # print results on train and test sets
     print("train accuracy : %.4f" % model.calculate_accuracy(get_train_loader()))
@@ -200,22 +200,35 @@ def four_hidden_layers_adam_weight_decay(number_of_neurons):
 
     print('Function 8: four_hidden_layers_adam_weight_decay')
 
-    weight_decay = 0.001
-    model = MnistFashionFeedforwardNetwork(
+    model_weight_decay = MnistFashionFeedforwardNetwork(
         n_hidden_units_per_layer=[number_of_neurons] * 4,
         activation_fun='relu',
         learning_rate=0.001,
         optimizer='Adam',
-        weight_decay=weight_decay
+        weight_decay=0.001
     )
 
     # train the model
     epochs = 250
-    model.train_model(epochs, f'{number_of_neurons} - Func8', compute_loss=True)
+    model_weight_decay.train_model(epochs, f'{number_of_neurons} - Func8_weight_decay', compute_loss=True)
 
     # print results on train and test sets
-    print("train accuracy : %.4f" % model.calculate_accuracy(get_train_loader()))
-    print("test accuracy : %.4f" % model.calculate_accuracy(get_test_loader()))
+    print("train accuracy with wight-decay : %.4f" % model_weight_decay.calculate_accuracy(get_train_loader()))
+    print("test accuracy with wight-decay : %.4f" % model_weight_decay.calculate_accuracy(get_test_loader()))
+
+    model_no_weight_decay = MnistFashionFeedforwardNetwork(
+        n_hidden_units_per_layer=[number_of_neurons] * 4,
+        activation_fun='relu',
+        learning_rate=0.001,
+        optimizer='Adam',
+    )
+
+    # train the model
+    model_no_weight_decay.train_model(epochs, f'{number_of_neurons} - Func8_no_weight_decay', compute_loss=True)
+
+    # print results on train and test sets
+    print("train accuracy without wight-decay : %.4f" % model_no_weight_decay.calculate_accuracy(get_train_loader()))
+    print("test accuracy without wight-decay : %.4f" % model_no_weight_decay.calculate_accuracy(get_test_loader()))
 
 
 def four_hidden_layers_adam_early_stopping(number_of_neurons):
@@ -236,8 +249,10 @@ def four_hidden_layers_adam_early_stopping(number_of_neurons):
 
     # train the model
     epochs = 250
-    path_to_model = os.path.join(generic_module.last_model_directory, 'model.pth')
     model.train_model(epochs, f'{number_of_neurons} - Func9', compute_loss=True, do_early_stopping=True)
+
+    # load the best model before stop
+    path_to_model = os.path.join(generic_module.last_model_directory, 'model.pth')
     model.load_state_dict(torch.load(path_to_model))
 
     # print results on train and test sets
