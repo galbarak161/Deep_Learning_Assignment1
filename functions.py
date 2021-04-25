@@ -2,6 +2,8 @@ import copy
 import os
 
 import torch
+from matplotlib import pyplot as plt
+
 import generic_module
 
 from assignment_1_code import get_device
@@ -79,6 +81,9 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
     best_model = None
     best_learning_rate = learning_rate
 
+    learning_rates = []
+    val_acc_per_lr = []
+
     while learning_rate < learning_rate_stop_value:
         # create new model and new optimizer
         model = MnistFashionFeedforwardNetwork(
@@ -93,7 +98,10 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
 
         val_acc = model.calculate_accuracy(get_validation_loader())
 
-        print("Learning Rate: {:.4}: Validation Set Accuracy: {:.4}".format(learning_rate, val_acc))
+        learning_rates.append(learning_rate)
+        val_acc_per_lr.append(val_acc)
+
+        print("Learning Rate: {:.4}: Validation Set Accuracy: {:.4}\n".format(learning_rate, val_acc))
 
         if val_acc > best_accuracy:
             best_learning_rate = learning_rate
@@ -101,6 +109,18 @@ def two_hidden_layers_relu(number_of_neurons: int) -> None:
             best_model = copy.deepcopy(model).to(get_device())
 
         learning_rate += step_size
+
+    # plot the learning rates results
+    plot_name = f'{number_of_neurons} - Function 4 - Validation accuracy per learning rate'
+    fig = plt.figure()
+    plt.title('Validation accuracy per learning rate')
+    plt.scatter(learning_rates, val_acc_per_lr)
+    plt.xlabel('Learning Rates')
+    plt.ylabel('Validation Accuracy')
+    plt.xticks(learning_rates)
+    fig.savefig(os.path.join(generic_module.plot_directory, plot_name))
+    plt.close(fig)
+    plt.clf()
 
     # print results on train and test sets
     print(f'best learning rate is {best_learning_rate}')

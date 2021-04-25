@@ -65,6 +65,7 @@ class GenericFeedforwardNetwork(torch.nn.Module):
 
         print('\nInitialized Model:')
         print(self)
+        print(f'Number of parameters: {self.count_parameters()}')
         print()
 
     def forward(self, x: object) -> object:
@@ -100,16 +101,14 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         train_loss_per_epoch = []
         val_loss_per_epoch = []
 
-        # parameters from early stop
-        best_early_stop_val_loss_per_epoch = []
-        best_early_stop_train_acc_per_epoch = []
-        best_early_stop_val_acc_per_epoch = []
-        best_early_stop_train_loss_per_epoch = []
-
+        # parameters for early stopping
         last_acc_improved = -np.inf
         patience_counter = 0
+        best_model_epoch_number = 0
 
-        for i in range(epochs):
+        i = 0
+        need_to_stop = False
+        while i < epochs and not need_to_stop:
             train_loss_for_batch = []
             valid_losses = []
 
@@ -146,17 +145,14 @@ class GenericFeedforwardNetwork(torch.nn.Module):
                     # saving the model
                     path_to_model = os.path.join(last_model_directory, 'model.pth')
                     torch.save(self.state_dict(), path_to_model)
-                    best_early_stop_val_loss_per_epoch = val_loss_per_epoch.copy()
-                    best_early_stop_train_acc_per_epoch = train_acc_per_epoch.copy()
-                    best_early_stop_val_acc_per_epoch = val_acc_per_epoch.copy()
-                    best_early_stop_train_loss_per_epoch = train_loss_per_epoch.copy()
+                    best_model_epoch_number = i
                     last_acc_improved = val_acc
                     patience_counter = 0
 
                 # stop the learning if the accuracy hasn't improved for the last {patience} iterations
                 if patience_counter >= patience:
                     print(f'Early stopping finished after {i} iterations')
-                    break
+                    need_to_stop = True
 
             if compute_loss:
                 # check performers on validation set for loss computing
@@ -186,13 +182,9 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             train_acc_per_epoch.append(train_acc)
             val_acc_per_epoch.append(val_acc)
 
+            i += 1
+
         print()
-        # load the best model from before early stop
-        if do_early_stopping:
-            val_loss_per_epoch = best_early_stop_val_loss_per_epoch.copy()
-            train_acc_per_epoch = best_early_stop_train_acc_per_epoch.copy()
-            val_acc_per_epoch = best_early_stop_val_acc_per_epoch.copy()
-            train_loss_per_epoch = best_early_stop_train_loss_per_epoch.copy()
 
         # plot the results
         acc_plot = plot_name + '_acc.png'
@@ -200,6 +192,9 @@ class GenericFeedforwardNetwork(torch.nn.Module):
         plt.title('Train and validation sets accuracy per epoch')
         plt.plot(train_acc_per_epoch, label='Train Accuracy')
         plt.plot(val_acc_per_epoch, label='Validation Accuracy')
+        if do_early_stopping:
+            plt.plot(best_model_epoch_number, val_acc_per_epoch[best_model_epoch_number], 'r*',
+                     label='Best Validation Accuracy')
         plt.legend()
         fig.savefig(os.path.join(plot_directory, acc_plot))
         plt.close(fig)
@@ -211,6 +206,9 @@ class GenericFeedforwardNetwork(torch.nn.Module):
             plt.title('Train and validation sets losses per epoch')
             plt.plot(train_loss_per_epoch, label='Train Loss')
             plt.plot(val_loss_per_epoch, label='Validation Loss')
+            if do_early_stopping:
+                plt.plot(best_model_epoch_number, val_loss_per_epoch[best_model_epoch_number], 'r*',
+                         label='Best Validation Accuracy')
             plt.legend()
             fig.savefig(os.path.join(plot_directory, loss_plot))
             plt.close(fig)
